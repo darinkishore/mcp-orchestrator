@@ -81,7 +81,7 @@ app.get('/healthz', (req, res) => {
 
 // Proxy requests to the appropriate server
 // Format: /mcp/:serverName/:apiKey/*
-app.use('/mcp/:serverName/:apiKey', (req, res) => {
+app.all('/mcp/:serverName/:apiKey/*', (req, res) => {
   const { serverName, apiKey } = req.params;
   const endpoint = req.path; // Get the remaining path
   
@@ -99,9 +99,13 @@ app.use('/mcp/:serverName/:apiKey', (req, res) => {
   }
   
   // Rewrite /mcp endpoint to /stream for mcp-proxy compatibility
-  if (req.path === '/mcp') {
+  // After middleware, remaining path starts with /
+  if (req.path === '/mcp' || req.path === '/') {
     req.url = '/stream';
-    console.log(`Rewrote URL from /mcp to /stream`);
+    console.log(`Rewrote URL from ${req.path} to /stream`);
+  } else if (req.path.endsWith('/mcp')) {
+    req.url = req.path.replace('/mcp', '/stream');
+    console.log(`Rewrote URL from ${req.path} to ${req.url}`);
   }
   
   // Forward to the mcp-proxy instance
