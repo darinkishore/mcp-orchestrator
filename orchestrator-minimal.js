@@ -25,14 +25,7 @@ async function startServers() {
     let command = server.command;
     let args = server.args || [];
     
-    if (command === 'npx' && args.length > 0) {
-      // For npx commands, try to resolve to the actual package
-      const packageName = args.find(arg => arg.startsWith('@') || (!arg.startsWith('-') && arg !== 'npx'));
-      if (packageName === '@modelcontextprotocol/server-filesystem') {
-        command = 'mcp-server-filesystem';
-        args = args.filter(arg => !arg.startsWith('-') && arg !== packageName);
-      }
-    }
+    // Keep original npx command structure
     
     // Use mcp-proxy CLI to start the server
     const spawnArgs = [
@@ -81,7 +74,7 @@ app.get('/healthz', (req, res) => {
 
 // Proxy requests to the appropriate server
 // Format: /mcp/:serverName/:apiKey/*
-app.all('/mcp/:serverName/:apiKey/*', (req, res) => {
+app.use('/mcp/:serverName/:apiKey', (req, res) => {
   const { serverName, apiKey } = req.params;
   const endpoint = req.path; // Get the remaining path
   
