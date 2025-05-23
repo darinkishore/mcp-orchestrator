@@ -98,6 +98,12 @@ app.use('/mcp/:serverName/:apiKey', (req, res) => {
     return res.status(404).json({ error: `Server '${serverName}' not found` });
   }
   
+  // Rewrite /mcp endpoint to /stream for mcp-proxy compatibility
+  if (req.path === '/mcp') {
+    req.url = '/stream';
+    console.log(`Rewrote URL from /mcp to /stream`);
+  }
+  
   // Forward to the mcp-proxy instance
   proxy.web(req, res, {
     target: `http://localhost:${server.port}`,
@@ -121,7 +127,8 @@ async function start() {
     console.log(`URL format: /mcp/{server-name}/{api-key}/{endpoint}`);
     console.log('\nExample URLs:');
     servers.forEach((server, name) => {
-      console.log(`  - http://localhost:${port}/mcp/${name}/${config.apiKeys[0]}/sse`);
+      console.log(`  - http://localhost:${port}/mcp/${name}/${config.apiKeys[0]}/sse (legacy)`);
+      console.log(`  - http://localhost:${port}/mcp/${name}/${config.apiKeys[0]}/mcp (modern)`);
     });
   });
   
