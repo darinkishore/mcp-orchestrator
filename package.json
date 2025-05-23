@@ -1,0 +1,25 @@
+{
+  "name": "mcp-orchestrator",
+  "version": "1.0.0",
+  "main": "orchestrator.js",
+  "scripts": {
+    "start": "node orchestrator-minimal.js",
+    "dev": "node orchestrator-minimal.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop ecosystem.config.js",
+    "pm2:restart": "pm2 restart ecosystem.config.js",
+    "pm2:logs": "pm2 logs",
+    "test": "./test.sh"
+  },
+  "keywords": ["mcp", "orchestrator", "gateway", "stdio", "http"],
+  "author": "",
+  "license": "MIT",
+  "description": "Lightweight gateway to expose stdio MCP servers over HTTP",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "http-proxy": "^1.18.1",
+    "mcp-proxy": "^3.0.3",
+    "uuid": "^11.1.0"
+  }
+}
