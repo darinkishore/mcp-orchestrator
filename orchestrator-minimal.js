@@ -21,15 +21,28 @@ async function startServers() {
     
     console.log(`Starting ${server.name} on port ${port}...`);
     
+    // Resolve npx commands to actual executables
+    let command = server.command;
+    let args = server.args || [];
+    
+    if (command === 'npx' && args.length > 0) {
+      // For npx commands, try to resolve to the actual package
+      const packageName = args.find(arg => arg.startsWith('@') || (!arg.startsWith('-') && arg !== 'npx'));
+      if (packageName === '@modelcontextprotocol/server-filesystem') {
+        command = 'mcp-server-filesystem';
+        args = args.filter(arg => !arg.startsWith('-') && arg !== packageName);
+      }
+    }
+    
     // Use mcp-proxy CLI to start the server
-    const args = [
+    const spawnArgs = [
       'mcp-proxy',
       '--port', port.toString(),
-      server.command,
-      ...(server.args || [])
+      command,
+      ...args
     ];
     
-    const proc = spawn('npx', args, {
+    const proc = spawn('npx', spawnArgs, {
       env: { ...process.env, ...server.env },
       stdio: 'inherit'
     });

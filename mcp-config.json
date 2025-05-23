@@ -6,8 +6,8 @@
   "servers": [
     {
       "name": "filesystem",
-      "command": "./start-filesystem.sh",
-      "args": [],
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
       "env": {}
     }
   ]
