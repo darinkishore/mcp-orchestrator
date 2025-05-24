@@ -13,8 +13,28 @@ const proxy = httpProxy.createProxyServer({});
 const servers = new Map();
 const processes = new Map();
 
+// Clean up any existing mcp-proxy processes
+async function cleanupExistingProcesses() {
+  console.log('Cleaning up existing mcp-proxy processes...');
+  try {
+    const { exec } = require('child_process');
+    await new Promise((resolve) => {
+      exec('pkill -f mcp-proxy', (error) => {
+        // Ignore errors (no processes to kill)
+        resolve();
+      });
+    });
+    // Give processes time to shut down
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  } catch (err) {
+    console.log('Cleanup completed');
+  }
+}
+
 // Spawn MCP servers using mcp-proxy CLI
 async function startServers() {
+  await cleanupExistingProcesses();
+  
   for (let idx = 0; idx < config.servers.length; idx++) {
     const server = config.servers[idx];
     const port = 4000 + idx;
@@ -46,10 +66,14 @@ async function startServers() {
     
     proc.on('exit', (code) => {
       console.log(`${server.name} exited with code ${code}`);
+      // Clean up from maps when process exits
+      servers.delete(server.name);
+      processes.delete(proc.pid);
     });
     
     servers.set(server.name, { port, process: proc });
     processes.set(proc.pid, server.name);
+    console.log(`Added ${server.name} to servers map (PID: ${proc.pid}, Port: ${port})`);
     
     // Give it time to start
     await new Promise(resolve => setTimeout(resolve, 5000));
@@ -62,13 +86,33 @@ const app = express();
 // Health check (no auth)
 app.get('/healthz', (req, res) => {
   const status = {};
+  console.log(`Health check: Found ${servers.size} servers in memory`);
+  
   servers.forEach((server, name) => {
+    console.log(`Checking server ${name} with PID ${server.process.pid}`);
+    // Check if process is actually running
+    let isAlive = false;
+    try {
+      // process.kill(pid, 0) throws if process doesn't exist
+      process.kill(server.process.pid, 0);
+      isAlive = true;
+      console.log(`Server ${name} is alive`);
+    } catch (err) {
+      // Process doesn't exist, clean up stale entry
+      console.log(`Cleaning up stale server entry: ${name} (PID ${server.process.pid})`);
+      servers.delete(name);
+      processes.delete(server.process.pid);
+      return; // Skip adding to status
+    }
+    
     status[name] = {
       port: server.port,
       pid: server.process.pid,
-      alive: !server.process.killed
+      alive: isAlive
     };
   });
+  
+  console.log(`Health check returning ${Object.keys(status).length} servers`);
   res.json({ healthy: true, servers: status });
 });
 
@@ -100,6 +144,8 @@ app.use('/mcp/:serverName/:apiKey', (req, res) => {
     req.url = req.path.replace('/mcp', '/stream');
     console.log(`Rewrote URL from ${req.path} to ${req.url}`);
   }
+  
+  console.log(`Forwarding ${serverName} request to port ${server.port}`);
   
   // Forward to the mcp-proxy instance
   proxy.web(req, res, {
