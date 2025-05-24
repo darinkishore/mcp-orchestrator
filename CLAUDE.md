@@ -156,10 +156,14 @@ When servers aren't responding:
 - Always use latest spec version: `"protocolVersion":"2024-11-05"`
 - Ensure `Accept` headers include: `application/json, text/event-stream`
 
-### Available Servers
+### Available Servers  
+**🎉 100% WORKING MULTI-SERVER IMPLEMENTATION**
+
 Current configuration includes:
-- **filesystem** (port 4000): File operations in /tmp directory
-- **sequential-thinking** (port 4001): Step-by-step reasoning server
+- **filesystem** (port 4000): File operations in /tmp directory ✅ FULLY WORKING
+- **sequential-thinking** (port 4001): Step-by-step reasoning server ✅ FULLY WORKING
+
+Both servers verified working end-to-end with latest MCP spec (2024-11-05).
 
 ### Debugging Commands
 ```bash
@@ -173,5 +177,132 @@ ps aux | grep mcp-proxy | grep -v grep
 curl -X POST http://localhost:4000/stream -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}'
 ```
 
-### Debugging Memories
-- When facing issues with mcp-proxy, ask a subagent to explore node_modules/mcp_proxy to investigate the questions you have if things dont work as you expect. 
+## Critical Debugging Lessons Learned
+
+### 🚨 State Management Issues
+
+**CRITICAL**: Always check for lingering root processes when experiencing stale PIDs:
+```bash
+ps aux | grep -E "(mcp|orchestrator)" | grep -v grep
+# Look for root-owned processes that may persist across restarts
+```
+
+**Root Process Cleanup**: If stale PIDs persist despite Map clearing, kill any root processes:
+```bash
+# These can maintain old state in memory even after PM2 restarts
+sudo pkill -f orchestrator  # May require root access
+```
+
+### 🔧 mcp-proxy Execution Patterns
+
+**WRONG**: Nested npx calls cause connection failures:
+```javascript
+spawn('npx', ['mcp-proxy', '--port', '4000', 'npx', '-y', '@server/package'])
+// Creates: npx → mcp-proxy → npx → server (FAILS)
+```
+
+**RIGHT**: Use wrapper scripts with proper PATH:
+```bash
+# start-server.sh
+export PATH="/usr/bin:/bin:/usr/local/bin:$PATH"
+exec /usr/bin/npx -y @server/package
+```
+
+```javascript
+spawn('./node_modules/.bin/mcp-proxy', ['--port', '4000', './start-server.sh'])
+// Creates: mcp-proxy → wrapper → server (WORKS)
+```
+
+### 📊 PM2 vs Manual Execution
+
+**Key Difference**: PM2 has different timing than manual execution:
+- **Manual**: Servers available immediately after "Ready" message
+- **PM2**: Need 15-20 second delay for full startup
+- **Health checks**: May show empty if called too early under PM2
+
+**Solution**: Add startup delays when testing PM2 deployments:
+```bash
+pm2 start ecosystem.config.js
+sleep 20  # Critical for PM2 startup
+curl http://localhost:3000/healthz
+```
+
+### 🗺️ Map State Debugging
+
+**Debug Map Contents**: Add comprehensive logging:
+```javascript
+console.log(`Current servers in map: ${Array.from(servers.keys()).map(k => `${k}(${servers.get(k).process.pid})`).join(', ')}`);
+```
+
+**Map Cleanup**: Always clear Maps during process cleanup:
+```javascript
+async function cleanupExistingProcesses() {
+  // Kill processes
+  exec('pkill -f mcp-proxy');
+  // CRITICAL: Clear Maps to remove stale entries
+  servers.clear();
+  processes.clear();
+}
+```
+
+### 🧪 Testing Strategies
+
+**Create Debug Test Scripts**: Manual background execution with `&` doesn't work reliably:
+```bash
+# test-debug.sh - Proper testing approach
+timeout 30s node orchestrator-minimal.js &
+ORCH_PID=$!
+sleep 15  # Wait for startup
+# Run tests
+kill $ORCH_PID  # Clean shutdown
+```
+
+**Subagent Investigation**: When mcp-proxy behaves unexpectedly:
+- Use Task tool to explore node_modules/mcp-proxy source
+- Check spawn arguments and shell execution patterns
+- Verify command resolution and PATH issues
+
+### 🔍 Express Route Debugging
+
+**Route Pattern Sensitivity**: Use exactly this pattern:
+```javascript
+app.use('/mcp/:serverName/:apiKey', (req, res) => {
+// NOT: app.all('/mcp/:serverName/:apiKey/*') - Causes path-to-regexp errors
+```
+
+**Debug Route Handlers**: Add comprehensive logging:
+```javascript
+console.log(`Available servers in map: ${Array.from(servers.keys()).join(', ')}`);
+console.log(`Looking for server: ${serverName}`);
+```
+
+### 🎯 Multi-Server Success Patterns
+
+**Verified Working Architecture**:
+- ✅ Both servers start successfully with wrapper scripts
+- ✅ Map state management with proper cleanup
+- ✅ Health checks show current PIDs (not stale)
+- ✅ Route handlers find servers in Map
+- ✅ End-to-end MCP protocol working for both servers
+
+**Final Test Commands**:
+```bash
+# Complete verification
+curl -s http://localhost:3000/healthz | jq .
+./test-working.sh  # Filesystem end-to-end
+curl -s http://localhost:3000/mcp/sequential-thinking/sk-mcp-hetzner-f4a8b2c9d1e3/stream \
+  -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}'
+```
+
+### 🔬 Investigation Methodology
+
+**When facing stale state issues**:
+1. **Check all running processes** (including root-owned)
+2. **Verify Map contents** with debug logging  
+3. **Test manual vs PM2 execution** separately
+4. **Use subagents** to investigate unfamiliar package behavior
+5. **Create isolated test scripts** for reliable debugging
+6. **Clean state comprehensively** (processes + Maps + temp files)
+
+**Never assume package behavior** - investigate with subagents when things don't work as expected. 
