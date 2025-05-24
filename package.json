@@ -16,10 +16,30 @@
     "pm2:restart": "~/.bun/bin/bun run build && pm2 restart ecosystem.config.cjs",
     "pm2:logs": "pm2 logs"
   },
-  "keywords": ["mcp", "orchestrator", "gateway", "stdio", "http", "typescript", "bun"],
-  "author": "",
+  "keywords": ["mcp", "model-context-protocol", "orchestrator", "gateway", "stdio", "http", "typescript", "bun", "server", "proxy"],
+  "author": "MCP Orchestrator Contributors",
   "license": "MIT",
-  "description": "Lightweight TypeScript gateway to expose stdio MCP servers over HTTP",
+  "description": "Modern TypeScript-based MCP orchestrator that exposes stdio MCP servers over HTTP with authentication",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/darinkishore/mcp-orchestrator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/darinkishore/mcp-orchestrator/issues"
+  },
+  "homepage": "https://github.com/darinkishore/mcp-orchestrator#readme",
+  "files": [
+    "dist/",
+    "src/",
+    "mcp-config.json",
+    "ecosystem.config.cjs",
+    "README.md",
+    "MCP_USAGE_GUIDE.md",
+    "tsconfig.json"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "express": "^5.1.0",
     "http-proxy": "^1.18.1",

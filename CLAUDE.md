@@ -4,10 +4,11 @@
 This is an MCP (Model Context Protocol) orchestrator that exposes stdio-based MCP servers over HTTP with API key authentication. It's deployed on a Hetzner box and managed with PM2.
 
 ## Current Setup
-- **Main script**: `orchestrator-minimal.js`
+- **Main script**: `dist/orchestrator.js` (built from TypeScript)
 - **Port**: 3000
 - **API Key**: `sk-mcp-hetzner-f4a8b2c9d1e3` (configured in mcp-config.json)
 - **Process manager**: PM2 (auto-starts on boot)
+- **Runtime**: Node.js with Bun package manager
 
 ## Architecture
 The orchestrator uses the `mcp-proxy` npm package to spawn MCP servers and expose them via HTTP:
@@ -16,13 +17,14 @@ The orchestrator uses the `mcp-proxy` npm package to spawn MCP servers and expos
 - Supports both SSE (Server-Sent Events) and Streamable HTTP transports
 
 ## Key Files
-- `orchestrator-minimal.js` - Main orchestrator script
+- `src/orchestrator.ts` - Main TypeScript orchestrator source
+- `dist/orchestrator.js` - Compiled JavaScript (built from TypeScript)
 - `mcp-config.json` - Configuration (servers, API keys, port)
-- `ecosystem.config.js` - PM2 configuration
-- `test-working.sh` - Working test script that demonstrates full flow
+- `ecosystem.config.cjs` - PM2 configuration
+- `src/scripts/start-filesystem.sh` - Wrapper script for filesystem server
+- `src/tests/` - Comprehensive test suite (Bun test runner)
 - `MCP_USAGE_GUIDE.md` - Comprehensive usage documentation
 - `MCP_PROXY_INTERNALS.md` - Deep dive into mcp-proxy behavior and common pitfalls
-- `start-filesystem.sh` - Wrapper script for filesystem server
 
 ## Available Endpoints
 - `GET /healthz` - Health check (no auth required)
@@ -36,8 +38,13 @@ The orchestrator uses the `mcp-proxy` npm package to spawn MCP servers and expos
 # Health check
 curl http://localhost:3000/healthz
 
-# Run the working test script
-./test-working.sh
+# Run the test suite
+bun test
+
+# Manual integration test
+curl -s http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3/stream \
+  -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}'
 ```
 
 ### Stream Endpoint (Recommended)
@@ -60,11 +67,13 @@ curl -s -X POST http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3
 ```
 
 ## Management Commands
+- `npm run build` - Build TypeScript to JavaScript
+- `npm run test` - Run test suite with Bun
 - `pm2 status` - Check status
 - `pm2 logs` - View logs  
 - `pm2 restart mcp-orchestrator` - Restart
 - `pm2 stop mcp-orchestrator` - Stop
-- `pm2 start ecosystem.config.js` - Start
+- `pm2 start ecosystem.config.cjs` - Start
 
 ## Adding New MCP Servers
 1. Edit `mcp-config.json`

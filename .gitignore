@@ -134,3 +134,10 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Project specific
+mcp-config.json.local
+*.local.*
+
+# PM2
+ecosystem.config.js.local

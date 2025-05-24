@@ -1,20 +1,27 @@
 # MCP Orchestrator
 
-A lightweight gateway that exposes stdio MCP (Model Context Protocol) servers over HTTP with API key authentication.
+A modern, TypeScript-based gateway that exposes stdio MCP (Model Context Protocol) servers over HTTP with API key authentication. Built with Bun and comprehensive testing.
 
 ## Features
 
-- 🚀 Exposes any stdio MCP server over HTTP following the official Streamable-HTTP spec
-- 🔑 Simple API key authentication
-- 🔄 Automatic process management for multiple MCP servers
-- 📊 Health monitoring endpoint
-- 🛡️ Production-ready with PM2 and Nginx integration
-- 📝 Easy configuration via JSON
+- 🚀 **Modern Architecture**: TypeScript-first with comprehensive type safety
+- 🔄 **Multi-Server Support**: Orchestrate multiple MCP servers simultaneously  
+- 🌐 **HTTP Transport**: Exposes stdio MCP servers via Streamable-HTTP and SSE
+- 🔑 **API Authentication**: Simple but secure API key-based authentication
+- ⚡ **High Performance**: Built with Bun package manager and optimized runtime
+- 🧪 **Fully Tested**: Comprehensive test coverage with Bun test runner
+- 📊 **Health Monitoring**: Built-in health checks and process monitoring
+- 🛡️ **Production Ready**: PM2 integration, proper error handling, and logging
+- 📝 **Easy Configuration**: Simple JSON-based configuration with validation
 
 ## Quick Start
 
 ### 1. Install dependencies
 ```bash
+# Using Bun (recommended)
+bun install
+
+# Or using npm
 npm install
 ```
 
@@ -41,28 +48,39 @@ Edit `mcp-config.json` (use **absolute paths only**):
 }
 ```
 
-### 3. Start the orchestrator
+### 3. Build and start the orchestrator
 ```bash
-node orchestrator.js
-```
+# Build TypeScript
+npm run build
 
-Or with PM2:
-```bash
-pm2 start ecosystem.config.js
+# Development mode (with auto-reload)
+bun run dev
+
+# Production mode  
+npm start
+
+# Run tests
+npm test
+
+# With PM2 (recommended for production)
+npm run pm2:start
 ```
 
 ## Usage
 
 ### Initialize a session
 ```bash
-curl -X POST http://localhost:3000/mcp \
-  -H "X-API-Key: your-api-key-here" \
-  -H "X-MCP-Server: weather" \
+curl -X POST http://localhost:3000/mcp/filesystem/your-api-key/stream \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
   -d '{
     "jsonrpc": "2.0",
-    "method": "initialize",
-    "params": {"protocolVersion": "0.1.0"},
+    "method": "initialize", 
+    "params": {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {},
+      "clientInfo": {"name": "test", "version": "1.0"}
+    },
     "id": 1
   }'
 ```
@@ -72,11 +90,28 @@ curl -X POST http://localhost:3000/mcp \
 curl http://localhost:3000/healthz
 ```
 
-## Deployment
+## Development
 
-Use the provided `deploy.sh` script for automated deployment on Ubuntu/Debian servers:
+### Available Scripts
+
+- `npm run build` - Compile TypeScript to JavaScript
+- `npm run start` - Run the compiled application  
+- `npm run dev` - Development mode with auto-reload (requires Bun)
+- `npm run test` - Run the test suite
+- `npm run test:watch` - Run tests in watch mode
+- `npm run typecheck` - Type-check without building
+- `npm run clean` - Clean build artifacts
+
+### Testing
+
+The project includes comprehensive tests covering configuration, types, and integration:
+
 ```bash
-./deploy.sh
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
 ```
 
 ## Architecture
