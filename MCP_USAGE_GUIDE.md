@@ -4,6 +4,8 @@
 
 The MCP Orchestrator exposes stdio-based MCP servers over HTTP with API key authentication. It uses URL-based routing and spawns `mcp-proxy` processes for each configured server.
 
+**CRITICAL**: All commands must use **absolute paths** due to `shell: false` in mcp-proxy.
+
 ## URL Format
 
 ```
@@ -222,6 +224,72 @@ curl -s -X DELETE http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1
 2. **Session Management**: Initialize session first, use session ID for subsequent requests
 3. **URL Structure**: Follow exact format `/mcp/{server-name}/{api-key}/{endpoint}`
 4. **Response Processing**: Extract JSON from `data:` lines in event stream responses
+
+## Configuration Best Practices
+
+### ✅ Preferred: Absolute Path Configuration
+
+```json
+{
+  "port": 3000,
+  "apiKeys": ["sk-mcp-hetzner-f4a8b2c9d1e3"],
+  "servers": [
+    {
+      "name": "filesystem",
+      "command": "/usr/bin/npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+      "env": {}
+    },
+    {
+      "name": "sequential-thinking", 
+      "command": "/usr/bin/npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "env": {}
+    }
+  ]
+}
+```
+
+### ⚠️ Fallback: Wrapper Script Configuration
+
+If direct absolute paths fail, use wrapper scripts:
+
+```json
+{
+  "servers": [
+    {
+      "name": "complex-server",
+      "command": "./start-complex-server.sh",
+      "args": [],
+      "env": {}
+    }
+  ]
+}
+```
+
+**Wrapper script example** (`start-complex-server.sh`):
+```bash
+#!/bin/bash
+export PATH="/usr/bin:/bin:/usr/local/bin:$PATH"
+exec /usr/bin/npx -y @complex/server --special-config
+```
+
+### 🚫 Don't Use: Relative Paths
+
+```json
+{
+  "servers": [
+    {
+      "name": "broken-server",
+      "command": "npx",  // ❌ No absolute path
+      "args": ["-y", "@pkg/server"],
+      "env": {}
+    }
+  ]
+}
+```
+
+**Why Absolute Paths?** mcp-proxy uses `shell: false` which bypasses PATH resolution.
 
 ## Troubleshooting
 

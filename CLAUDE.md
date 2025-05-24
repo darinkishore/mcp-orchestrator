@@ -68,19 +68,20 @@ curl -s -X POST http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3
 
 ## Adding New MCP Servers
 1. Edit `mcp-config.json`
-2. Add server configuration:
+2. **PREFERRED**: Use absolute paths for simple servers:
    ```json
    {
      "name": "server-name",
-     "command": "./wrapper-script.sh",
-     "args": [],
+     "command": "/usr/bin/npx",
+     "args": ["-y", "@org/mcp-server", "--arg1", "value1"],
      "env": {}
    }
    ```
-3. Create wrapper script (recommended for complex commands):
+3. **FALLBACK**: Create wrapper script for complex servers:
    ```bash
    #!/bin/bash
-   exec npx -y @org/mcp-server --arg1 value1
+   export PATH="/usr/bin:/bin:/usr/local/bin:$PATH"
+   exec /usr/bin/npx -y @org/mcp-server --arg1 value1
    ```
 4. Make executable: `chmod +x wrapper-script.sh`
 5. Restart orchestrator: `pm2 restart mcp-orchestrator`
@@ -165,11 +166,11 @@ Current configuration includes:
 
 Both servers verified working end-to-end with latest MCP spec (2024-11-05).
 
-### Direct NPX vs Wrapper Scripts
+### Command Execution: Absolute Paths Required
 
-**Key Discovery**: mcp-proxy uses `shell: false` in `spawn()`, which affects command resolution:
+**MANDATORY**: mcp-proxy uses `shell: false` in `spawn()`, requiring absolute paths:
 
-✅ **Works**: Direct absolute npx paths for some servers:
+✅ **Simple Servers**: Direct absolute npx paths work perfectly:
 ```json
 {
   "name": "sequential-thinking",
@@ -178,7 +179,7 @@ Both servers verified working end-to-end with latest MCP spec (2024-11-05).
 }
 ```
 
-⚠️ **Mixed Results**: Some servers (like filesystem) fail with direct npx but work with wrapper scripts:
+⚠️ **Complex Servers**: Some servers require wrapper scripts for environment setup:
 ```json
 {
   "name": "filesystem", 
@@ -187,13 +188,14 @@ Both servers verified working end-to-end with latest MCP spec (2024-11-05).
 }
 ```
 
-**Technical Explanation**:
+**Technical Requirements**:
+- **ALWAYS use absolute paths**: `/usr/bin/npx`, `/usr/bin/node`, etc.
 - mcp-proxy spawns with `shell: false` (confirmed in `StdioClientTransport.ts:81`)
-- This bypasses shell PATH resolution  
-- Direct `/usr/bin/npx` works for sequential-thinking
-- Filesystem server may have specific execution requirements requiring wrapper script environment setup
+- No shell PATH resolution or environment variable expansion
+- Simple servers (no args): Use direct absolute npx
+- Complex servers (args/env): Use wrapper scripts with absolute paths
 
-**Best Practice**: Use wrapper scripts for complex servers, direct npx for simple ones. Test each server individually to determine compatibility.
+**Best Practice**: Start with absolute npx paths, fall back to wrapper scripts if needed.
 
 ### Debugging Commands
 ```bash

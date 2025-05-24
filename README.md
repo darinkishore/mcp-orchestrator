@@ -19,15 +19,22 @@ npm install
 ```
 
 ### 2. Configure your MCP servers
-Edit `mcp-config.json`:
+Edit `mcp-config.json` (use **absolute paths only**):
 ```json
 {
   "port": 3000,
   "apiKeys": ["your-api-key-here"],
   "servers": [
     {
-      "name": "weather",
-      "command": "node ./servers/weather-mcp/index.js",
+      "name": "filesystem",
+      "command": "/usr/bin/npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+      "env": {}
+    },
+    {
+      "name": "sequential-thinking",
+      "command": "/usr/bin/npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
       "env": {}
     }
   ]
@@ -97,8 +104,11 @@ Add keys to the `apiKeys` array in `mcp-config.json`. Clients must include the k
 ### Adding MCP Servers
 Each server in the config needs:
 - `name`: Unique identifier for routing
-- `command`: Command to spawn the stdio MCP server
+- `command`: **ABSOLUTE PATH** to executable (e.g., `/usr/bin/npx`)
+- `args`: Array of arguments for the command
 - `env`: Environment variables (optional)
+
+**Important**: Use absolute paths due to `shell: false` in mcp-proxy.
 
 ## Production Setup
 

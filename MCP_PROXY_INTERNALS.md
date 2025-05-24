@@ -32,7 +32,7 @@ this.process = spawn(
 - Must use absolute paths or rely on PATH
 - Commands like `npx -y @pkg/server arg1 arg2` must be split properly
 
-**Solution**: Use wrapper scripts or properly split commands.
+**Solution**: Use absolute paths (`/usr/bin/npx`) or wrapper scripts with absolute paths.
 
 ### 2. HTTP Server Endpoints
 
