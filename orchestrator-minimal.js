@@ -26,6 +26,11 @@ async function cleanupExistingProcesses() {
     });
     // Give processes time to shut down
     await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Clear Maps to remove stale entries
+    servers.clear();
+    processes.clear();
+    console.log('Cleared stale server entries');
   } catch (err) {
     console.log('Cleanup completed');
   }
@@ -74,6 +79,7 @@ async function startServers() {
     servers.set(server.name, { port, process: proc });
     processes.set(proc.pid, server.name);
     console.log(`Added ${server.name} to servers map (PID: ${proc.pid}, Port: ${port})`);
+    console.log(`Current servers in map: ${Array.from(servers.keys()).map(k => `${k}(${servers.get(k).process.pid})`).join(', ')}`);
     
     // Give it time to start
     await new Promise(resolve => setTimeout(resolve, 5000));
