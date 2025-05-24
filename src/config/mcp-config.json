@@ -6,7 +6,7 @@
   "servers": [
     {
       "name": "filesystem",
-      "command": "./src/scripts/start-filesystem.sh",
+      "command": "./start-filesystem.sh",
       "args": [],
       "env": {}
     },

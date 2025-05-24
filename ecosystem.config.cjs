@@ -1,7 +1,7 @@
 module.exports = {
   apps: [{
     name: 'mcp-orchestrator',
-    script: './orchestrator-minimal.js',
+    script: './dist/orchestrator.js',
     instances: 1,
     exec_mode: 'fork',
     autorestart: true,

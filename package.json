@@ -1,25 +1,34 @@
 {
   "name": "mcp-orchestrator",
   "version": "1.0.0",
-  "main": "orchestrator.js",
+  "type": "module",
+  "main": "dist/orchestrator.js",
   "scripts": {
-    "start": "node orchestrator-minimal.js",
-    "dev": "node orchestrator-minimal.js",
-    "pm2:start": "pm2 start ecosystem.config.js",
-    "pm2:stop": "pm2 stop ecosystem.config.js",
-    "pm2:restart": "pm2 restart ecosystem.config.js",
-    "pm2:logs": "pm2 logs",
-    "test": "./test.sh"
+    "build": "tsc",
+    "start": "node dist/orchestrator.js",
+    "dev": "~/.bun/bin/bun run --watch src/orchestrator.ts",
+    "test": "~/.bun/bin/bun test",
+    "test:watch": "~/.bun/bin/bun test --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "pm2:start": "npm run build && pm2 start ecosystem.config.cjs",
+    "pm2:stop": "pm2 stop ecosystem.config.cjs",
+    "pm2:restart": "~/.bun/bin/bun run build && pm2 restart ecosystem.config.cjs",
+    "pm2:logs": "pm2 logs"
   },
-  "keywords": ["mcp", "orchestrator", "gateway", "stdio", "http"],
+  "keywords": ["mcp", "orchestrator", "gateway", "stdio", "http", "typescript", "bun"],
   "author": "",
   "license": "MIT",
-  "description": "Lightweight gateway to expose stdio MCP servers over HTTP",
+  "description": "Lightweight TypeScript gateway to expose stdio MCP servers over HTTP",
   "dependencies": {
-    "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "http-proxy": "^1.18.1",
-    "mcp-proxy": "^3.0.3",
-    "uuid": "^11.1.0"
+    "mcp-proxy": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/http-proxy": "^1.17.0",
+    "bun-types": "latest",
+    "typescript": "^5.0.0"
   }
 }
