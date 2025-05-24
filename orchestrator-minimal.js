@@ -49,13 +49,13 @@ async function startServers() {
     
     // Use mcp-proxy CLI to start the server
     const spawnArgs = [
-      'mcp-proxy',
       '--port', port.toString(),
+      '--debug',
       command,
       ...args
     ];
     
-    const proc = spawn('npx', spawnArgs, {
+    const proc = spawn('./node_modules/.bin/mcp-proxy', spawnArgs, {
       env: { ...process.env, ...server.env },
       stdio: 'inherit'
     });
@@ -129,11 +129,17 @@ app.use('/mcp/:serverName/:apiKey', (req, res) => {
     return res.status(401).json({ error: 'Invalid API key' });
   }
   
+  console.log(`Available servers in map: ${Array.from(servers.keys()).join(', ')}`);
+  console.log(`Looking for server: ${serverName}`);
+  
   const server = servers.get(serverName);
   
   if (!server) {
+    console.log(`Server '${serverName}' not found in map`);
     return res.status(404).json({ error: `Server '${serverName}' not found` });
   }
+  
+  console.log(`Found server ${serverName} with PID ${server.process.pid}`);;
   
   // Rewrite /mcp endpoint to /stream for mcp-proxy compatibility
   // After middleware, remaining path starts with /

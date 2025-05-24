@@ -6,14 +6,14 @@
   "servers": [
     {
       "name": "filesystem",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+      "command": "./start-filesystem.sh",
+      "args": [],
       "env": {}
     },
     {
       "name": "sequential-thinking",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "command": "./start-sequential-thinking.sh",
+      "args": [],
       "env": {}
     }
   ]

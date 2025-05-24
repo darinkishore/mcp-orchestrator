@@ -172,3 +172,6 @@ ps aux | grep mcp-proxy | grep -v grep
 # Test specific server directly
 curl -X POST http://localhost:4000/stream -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}'
 ```
+
+### Debugging Memories
+- When facing issues with mcp-proxy, ask a subagent to explore node_modules/mcp_proxy to investigate the questions you have if things dont work as you expect. 
