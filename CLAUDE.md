@@ -165,6 +165,36 @@ Current configuration includes:
 
 Both servers verified working end-to-end with latest MCP spec (2024-11-05).
 
+### Direct NPX vs Wrapper Scripts
+
+**Key Discovery**: mcp-proxy uses `shell: false` in `spawn()`, which affects command resolution:
+
+✅ **Works**: Direct absolute npx paths for some servers:
+```json
+{
+  "name": "sequential-thinking",
+  "command": "/usr/bin/npx",
+  "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+}
+```
+
+⚠️ **Mixed Results**: Some servers (like filesystem) fail with direct npx but work with wrapper scripts:
+```json
+{
+  "name": "filesystem", 
+  "command": "./start-filesystem.sh",
+  "args": []
+}
+```
+
+**Technical Explanation**:
+- mcp-proxy spawns with `shell: false` (confirmed in `StdioClientTransport.ts:81`)
+- This bypasses shell PATH resolution  
+- Direct `/usr/bin/npx` works for sequential-thinking
+- Filesystem server may have specific execution requirements requiring wrapper script environment setup
+
+**Best Practice**: Use wrapper scripts for complex servers, direct npx for simple ones. Test each server individually to determine compatibility.
+
 ### Debugging Commands
 ```bash
 # Full restart and status check
