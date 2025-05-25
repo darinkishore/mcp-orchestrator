@@ -159,6 +159,16 @@ Run the smoke test:
 ./test.sh
 ```
 
+## Troubleshooting
+
+If servers appear to start but API calls return "server not found", you likely have stale orchestrator processes. See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for the complete guide.
+
+Quick fix:
+```bash
+pkill -f orchestrator && pkill -f mcp-proxy
+pm2 delete mcp-orchestrator && pm2 start ecosystem.config.cjs
+```
+
 ## License
 
 MIT

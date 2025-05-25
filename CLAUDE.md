@@ -21,8 +21,8 @@ The orchestrator uses the `mcp-proxy` npm package to spawn MCP servers and expos
 - `dist/orchestrator.js` - Compiled JavaScript (built from TypeScript)
 - `mcp-config.json` - Configuration (servers, API keys, port)
 - `ecosystem.config.cjs` - PM2 configuration
-- `src/scripts/start-filesystem.sh` - Wrapper script for filesystem server
 - `src/tests/` - Comprehensive test suite (Bun test runner)
+- `TROUBLESHOOTING.md` - Complete guide to debugging common issues
 - `MCP_USAGE_GUIDE.md` - Comprehensive usage documentation
 - `MCP_PROXY_INTERNALS.md` - Deep dive into mcp-proxy behavior and common pitfalls
 
@@ -88,7 +88,7 @@ curl -s -X POST http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3
    ```
 3. Restart orchestrator: `pm2 restart mcp-orchestrator`
 
-**Note**: The orchestrator uses a custom mcp-proxy fork with `--shell` support that handles complex argument structures properly. No wrapper scripts needed!
+**Note**: The orchestrator uses standard mcp-proxy from npm. The `--` separator ensures proper argument handling.
 
 ## Protocol Requirements
 - **Accept Headers**: Must include `application/json, text/event-stream`
@@ -100,11 +100,21 @@ curl -s -X POST http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3
 - Each MCP server gets its own port starting from 4000
 - The orchestrator spawns child processes using mcp-proxy CLI
 - Authentication via URL path: `{server-name}/{api-key}/mcp` (new) or `/mcp/{server-name}/{api-key}/{endpoint}` (legacy)
-- Uses custom mcp-proxy fork with `--shell` flag for proper argument handling
+- Uses standard mcp-proxy with `--` separator for proper argument handling
 - Logs are in `/root/projects/mcp_orchestrator/mcp-orchestrator/logs/`
 - See `MCP_USAGE_GUIDE.md` for detailed examples and troubleshooting
 
 ## Debugging & Troubleshooting (Claude Notes)
+
+### 🚨 MOST COMMON ISSUE: Stale Orchestrator Processes
+If servers appear to start but health check shows empty `{}`, **check for stale processes first**:
+```bash
+ps aux | grep -E "(orchestrator|mcp-proxy)" | grep -v grep
+# If you see old PIDs or multiple orchestrators, kill them all:
+pkill -f orchestrator && pkill -f mcp-proxy
+pm2 delete mcp-orchestrator && pm2 start ecosystem.config.cjs
+```
+This solves 90% of "server not found" issues. See TROUBLESHOOTING.md for details.
 
 ### Express Route Pattern Issues
 **CRITICAL**: The Express route pattern is sensitive. Use exactly this pattern:
@@ -170,9 +180,9 @@ Current configuration includes:
 
 Both servers verified working end-to-end with latest MCP spec (2024-11-05).
 
-### Command Execution: Absolute Paths with Shell Support
+### Command Execution: Absolute Paths with Standard mcp-proxy
 
-**CURRENT**: Uses custom mcp-proxy fork with `--shell` flag for proper argument handling:
+**CURRENT**: Uses standard mcp-proxy from npm with `--` separator:
 
 ✅ **All Servers**: Direct absolute npx paths work perfectly:
 ```json
@@ -193,11 +203,9 @@ Both servers verified working end-to-end with latest MCP spec (2024-11-05).
 
 **Technical Requirements**:
 - **ALWAYS use absolute paths**: `/usr/bin/npx`, `/usr/bin/node`, etc.
-- Custom mcp-proxy fork with `--shell` flag handles complex arguments properly
+- Standard mcp-proxy with `--` separator handles arguments properly
 - Proper command/args separation following MCP ecosystem standards
-- No wrapper scripts needed
-
-**Dependencies**: Uses `mcp-proxy@github:darinkishore/mcp-proxy` with shell support.
+- No wrapper scripts or custom forks needed
 
 ### Debugging Commands
 ```bash
@@ -229,23 +237,21 @@ sudo pkill -f orchestrator  # May require root access
 
 ### 🔧 mcp-proxy Execution Patterns
 
-**WRONG**: Nested npx calls cause connection failures:
+**SIMPLE SOLUTION**: Use `--` separator to prevent argument consumption:
 ```javascript
-spawn('npx', ['mcp-proxy', '--port', '4000', 'npx', '-y', '@server/package'])
-// Creates: npx → mcp-proxy → npx → server (FAILS)
+// In orchestrator:
+const spawnArgs = [
+  '--port', port.toString(),
+  '--debug',
+  '--server', 'stream',
+  server.command,
+  '--',  // This separator is the key!
+  ...(server.args || [])
+];
+spawn('node', ['node_modules/mcp-proxy/dist/bin/mcp-proxy.js', ...spawnArgs])
 ```
 
-**RIGHT**: Use wrapper scripts with proper PATH:
-```bash
-# start-server.sh
-export PATH="/usr/bin:/bin:/usr/local/bin:$PATH"
-exec /usr/bin/npx -y @server/package
-```
-
-```javascript
-spawn('./node_modules/.bin/mcp-proxy', ['--port', '4000', './start-server.sh'])
-// Creates: mcp-proxy → wrapper → server (WORKS)
-```
+**No wrapper scripts needed!** The `--` tells yargs to stop parsing options and treat everything after as positional arguments.
 
 ### 📊 PM2 vs Manual Execution
 
@@ -313,7 +319,7 @@ console.log(`Looking for server: ${serverName}`);
 ### 🎯 Multi-Server Success Patterns
 
 **Verified Working Architecture**:
-- ✅ Both servers start successfully with wrapper scripts
+- ✅ Both servers start successfully with `--` separator
 - ✅ Map state management with proper cleanup
 - ✅ Health checks show current PIDs (not stale)
 - ✅ Route handlers find servers in Map
