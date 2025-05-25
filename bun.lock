@@ -5,8 +5,8 @@
       "name": "mcp-orchestrator",
       "dependencies": {
         "express": "^5.1.0",
+        "mcp-proxy": "github:darinkishore/mcp-proxy",
         "http-proxy": "^1.18.1",
-        "mcp-proxy": "^3.0.3",
       },
       "devDependencies": {
         "@types/express": "^5.0.0",
@@ -159,7 +159,7 @@
 
     "math-intrinsics": ["math-intrinsics@1.1.0", "", {}, "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g=="],
 
-    "mcp-proxy": ["mcp-proxy@3.0.4", "", { "dependencies": { "@modelcontextprotocol/sdk": "^1.11.4", "eventsource": "^4.0.0", "yargs": "^17.7.2" }, "bin": { "mcp-proxy": "dist/bin/mcp-proxy.js" } }, "sha512-dT4j3xB/5o2JSxJ0ZbpodMpQRETnSK1cexAJRs359vlpsDrRrlW4fW2ftA+cY4Fi3jDZOQER4Rs4fMAUyyVeGw=="],
+    "mcp-proxy": ["mcp-proxy@github:darinkishore/mcp-proxy#bc92ccd", { "dependencies": { "@modelcontextprotocol/sdk": "^1.11.4", "eventsource": "^4.0.0", "yargs": "^17.7.2" }, "bin": { "mcp-proxy": "dist/bin/mcp-proxy.js" } }, "darinkishore-mcp-proxy-bc92ccd"],
 
     "media-typer": ["media-typer@1.1.0", "", {}, "sha512-aisnrDP4GNe06UcKFnV5bfMNPBUw4jsLGaWwWfnH3v02GnBuXX2MCVn5RbrWo0j3pczUilYblq7fQ7Nw2t5XKw=="],
 

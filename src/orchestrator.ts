@@ -49,15 +49,16 @@ async function startServers(): Promise<void> {
     
     console.log(`Starting ${server.name} on port ${port}...`);
     
-    // Use mcp-proxy CLI to start the server
+    // Use mcp-proxy CLI to start the server with shell support
     const spawnArgs = [
       '--port', port.toString(),
       '--debug',
+      '--shell',
       server.command,
       ...(server.args || [])
     ];
     
-    const proc: ChildProcess = spawn('./node_modules/.bin/mcp-proxy', spawnArgs, {
+    const proc: ChildProcess = spawn('node', ['node_modules/mcp-proxy/dist/bin/mcp-proxy.js', ...spawnArgs], {
       env: { ...process.env, ...server.env },
       stdio: 'inherit'
     });
@@ -178,7 +179,11 @@ const proxyHandler: RequestHandler = (req: Request, res: Response) => {
   });
 };
 
+// Legacy route: /mcp/{server-name}/{api-key}/{endpoint}
 app.use('/mcp/:serverName/:apiKey', proxyHandler);
+
+// New route: {server-name}/{api-key}/mcp (maps to /stream endpoint)
+app.use('/:serverName/:apiKey/mcp', proxyHandler);
 
 // Start everything
 async function start(): Promise<void> {
@@ -188,11 +193,13 @@ async function start(): Promise<void> {
   const server = app.listen(port, () => {
     console.log(`\nMCP Orchestrator ready on port ${port}`);
     console.log(`Managing ${servers.size} MCP servers`);
-    console.log(`URL format: /mcp/{server-name}/{api-key}/{endpoint}`);
+    console.log(`URL formats:`);
+    console.log(`  New: {server-name}/{api-key}/mcp`);
+    console.log(`  Legacy: /mcp/{server-name}/{api-key}/{endpoint}`);
     console.log('\nExample URLs:');
     servers.forEach((server, name) => {
-      console.log(`  - http://localhost:${port}/mcp/${name}/${config.apiKeys[0]}/sse (legacy)`);
-      console.log(`  - http://localhost:${port}/mcp/${name}/${config.apiKeys[0]}/mcp (modern)`);
+      console.log(`  - http://localhost:${port}/${name}/${config.apiKeys[0]}/mcp (new format)`);
+      console.log(`  - http://localhost:${port}/mcp/${name}/${config.apiKeys[0]}/stream (legacy)`);
     });
   });
   

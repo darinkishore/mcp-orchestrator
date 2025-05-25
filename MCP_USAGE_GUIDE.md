@@ -4,10 +4,16 @@
 
 The MCP Orchestrator exposes stdio-based MCP servers over HTTP with API key authentication. It uses URL-based routing and spawns `mcp-proxy` processes for each configured server.
 
-**CRITICAL**: All commands must use **absolute paths** due to `shell: false` in mcp-proxy.
+**CRITICAL**: All commands must use **absolute paths**. Uses custom mcp-proxy fork with `--shell` support.
 
-## URL Format
+## URL Formats
 
+### New Format (Recommended)
+```
+http://localhost:3000/{server-name}/{api-key}/mcp
+```
+
+### Legacy Format  
 ```
 http://localhost:3000/mcp/{server-name}/{api-key}/{endpoint}
 ```
@@ -15,7 +21,7 @@ http://localhost:3000/mcp/{server-name}/{api-key}/{endpoint}
 Where:
 - `{server-name}`: Name from mcp-config.json
 - `{api-key}`: Valid API key from configuration
-- `{endpoint}`: Either `stream` or `sse`
+- `{endpoint}`: Either `stream` or `sse` (legacy format only)
 
 ## Endpoints
 
@@ -26,6 +32,22 @@ The `/stream` endpoint provides stateful sessions with JSON responses.
 #### Initialize Session
 
 ```bash
+# New format (recommended)
+curl -X POST http://localhost:3000/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {},
+      "clientInfo": {"name": "my-client", "version": "1.0"}
+    },
+    "id": 1
+  }'
+
+# Legacy format
 curl -X POST http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3/stream \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
@@ -46,6 +68,18 @@ Response includes session ID in `mcp-session-id` header.
 #### Use Session
 
 ```bash
+# New format (recommended)
+curl -X POST http://localhost:3000/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "mcp-session-id: {session-id}" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "tools/list",
+    "id": 2
+  }'
+
+# Legacy format
 curl -X POST http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3/stream \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
@@ -60,6 +94,11 @@ curl -X POST http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3/st
 #### Terminate Session
 
 ```bash
+# New format (recommended)
+curl -X DELETE http://localhost:3000/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3/mcp \
+  -H "mcp-session-id: {session-id}"
+
+# Legacy format
 curl -X DELETE http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3/stream \
   -H "mcp-session-id: {session-id}"
 ```
@@ -179,8 +218,8 @@ Extract JSON from `data:` line for processing.
 ```bash
 #!/bin/bash
 
-# Initialize session
-RESPONSE=$(curl -s -i -X POST http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3/stream \
+# Initialize session (new format)
+RESPONSE=$(curl -s -i -X POST http://localhost:3000/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}')
@@ -189,7 +228,7 @@ RESPONSE=$(curl -s -i -X POST http://localhost:3000/mcp/filesystem/sk-mcp-hetzne
 SESSION_ID=$(echo "$RESPONSE" | grep -i "mcp-session-id:" | cut -d' ' -f2 | tr -d '\r')
 
 # List tools
-TOOLS=$(curl -s -X POST http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3/stream \
+TOOLS=$(curl -s -X POST http://localhost:3000/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -H "mcp-session-id: $SESSION_ID" \
@@ -199,7 +238,7 @@ TOOLS=$(curl -s -X POST http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8
 echo "$TOOLS" | grep "^data:" | cut -d' ' -f2- | jq .
 
 # Call a tool
-curl -s -X POST http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3/stream \
+curl -s -X POST http://localhost:3000/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -H "mcp-session-id: $SESSION_ID" \
@@ -214,7 +253,7 @@ curl -s -X POST http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3
   }' | grep "^data:" | cut -d' ' -f2- | jq .
 
 # Terminate session
-curl -s -X DELETE http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3/stream \
+curl -s -X DELETE http://localhost:3000/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3/mcp \
   -H "mcp-session-id: $SESSION_ID"
 ```
 
@@ -222,12 +261,12 @@ curl -s -X DELETE http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1
 
 1. **Accept Headers**: Must include both `application/json, text/event-stream`
 2. **Session Management**: Initialize session first, use session ID for subsequent requests
-3. **URL Structure**: Follow exact format `/mcp/{server-name}/{api-key}/{endpoint}`
+3. **URL Structure**: Use new format `{server-name}/{api-key}/mcp` or legacy `/mcp/{server-name}/{api-key}/{endpoint}`
 4. **Response Processing**: Extract JSON from `data:` lines in event stream responses
 
 ## Configuration Best Practices
 
-### ✅ Preferred: Absolute Path Configuration
+### ✅ Recommended: Absolute Path Configuration
 
 ```json
 {
@@ -250,30 +289,6 @@ curl -s -X DELETE http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1
 }
 ```
 
-### ⚠️ Fallback: Wrapper Script Configuration
-
-If direct absolute paths fail, use wrapper scripts:
-
-```json
-{
-  "servers": [
-    {
-      "name": "complex-server",
-      "command": "./start-complex-server.sh",
-      "args": [],
-      "env": {}
-    }
-  ]
-}
-```
-
-**Wrapper script example** (`start-complex-server.sh`):
-```bash
-#!/bin/bash
-export PATH="/usr/bin:/bin:/usr/local/bin:$PATH"
-exec /usr/bin/npx -y @complex/server --special-config
-```
-
 ### 🚫 Don't Use: Relative Paths
 
 ```json
@@ -289,7 +304,7 @@ exec /usr/bin/npx -y @complex/server --special-config
 }
 ```
 
-**Why Absolute Paths?** mcp-proxy uses `shell: false` which bypasses PATH resolution.
+**Why Absolute Paths?** The orchestrator uses custom mcp-proxy fork with `--shell` support that requires absolute command paths for proper execution.
 
 ## Troubleshooting
 

@@ -77,7 +77,7 @@ curl -s -X POST http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3
 
 ## Adding New MCP Servers
 1. Edit `mcp-config.json`
-2. **PREFERRED**: Use absolute paths for simple servers:
+2. Use absolute paths with proper command/args separation:
    ```json
    {
      "name": "server-name",
@@ -86,14 +86,9 @@ curl -s -X POST http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3
      "env": {}
    }
    ```
-3. **FALLBACK**: Create wrapper script for complex servers:
-   ```bash
-   #!/bin/bash
-   export PATH="/usr/bin:/bin:/usr/local/bin:$PATH"
-   exec /usr/bin/npx -y @org/mcp-server --arg1 value1
-   ```
-4. Make executable: `chmod +x wrapper-script.sh`
-5. Restart orchestrator: `pm2 restart mcp-orchestrator`
+3. Restart orchestrator: `pm2 restart mcp-orchestrator`
+
+**Note**: The orchestrator uses a custom mcp-proxy fork with `--shell` support that handles complex argument structures properly. No wrapper scripts needed!
 
 ## Protocol Requirements
 - **Accept Headers**: Must include `application/json, text/event-stream`
@@ -104,8 +99,8 @@ curl -s -X POST http://localhost:3000/mcp/filesystem/sk-mcp-hetzner-f4a8b2c9d1e3
 ## Important Notes
 - Each MCP server gets its own port starting from 4000
 - The orchestrator spawns child processes using mcp-proxy CLI
-- Authentication via URL path: `/mcp/{server-name}/{api-key}/{endpoint}`
-- Use wrapper scripts for complex commands (mcp-proxy uses `shell: false`)
+- Authentication via URL path: `{server-name}/{api-key}/mcp` (new) or `/mcp/{server-name}/{api-key}/{endpoint}` (legacy)
+- Uses custom mcp-proxy fork with `--shell` flag for proper argument handling
 - Logs are in `/root/projects/mcp_orchestrator/mcp-orchestrator/logs/`
 - See `MCP_USAGE_GUIDE.md` for detailed examples and troubleshooting
 
@@ -175,11 +170,19 @@ Current configuration includes:
 
 Both servers verified working end-to-end with latest MCP spec (2024-11-05).
 
-### Command Execution: Absolute Paths Required
+### Command Execution: Absolute Paths with Shell Support
 
-**MANDATORY**: mcp-proxy uses `shell: false` in `spawn()`, requiring absolute paths:
+**CURRENT**: Uses custom mcp-proxy fork with `--shell` flag for proper argument handling:
 
-✅ **Simple Servers**: Direct absolute npx paths work perfectly:
+✅ **All Servers**: Direct absolute npx paths work perfectly:
+```json
+{
+  "name": "filesystem",
+  "command": "/usr/bin/npx",
+  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+}
+```
+
 ```json
 {
   "name": "sequential-thinking",
@@ -188,23 +191,13 @@ Both servers verified working end-to-end with latest MCP spec (2024-11-05).
 }
 ```
 
-⚠️ **Complex Servers**: Some servers require wrapper scripts for environment setup:
-```json
-{
-  "name": "filesystem", 
-  "command": "./start-filesystem.sh",
-  "args": []
-}
-```
-
 **Technical Requirements**:
 - **ALWAYS use absolute paths**: `/usr/bin/npx`, `/usr/bin/node`, etc.
-- mcp-proxy spawns with `shell: false` (confirmed in `StdioClientTransport.ts:81`)
-- No shell PATH resolution or environment variable expansion
-- Simple servers (no args): Use direct absolute npx
-- Complex servers (args/env): Use wrapper scripts with absolute paths
+- Custom mcp-proxy fork with `--shell` flag handles complex arguments properly
+- Proper command/args separation following MCP ecosystem standards
+- No wrapper scripts needed
 
-**Best Practice**: Start with absolute npx paths, fall back to wrapper scripts if needed.
+**Dependencies**: Uses `mcp-proxy@github:darinkishore/mcp-proxy` with shell support.
 
 ### Debugging Commands
 ```bash
