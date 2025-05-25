@@ -49,11 +49,11 @@ async function startServers(): Promise<void> {
     
     console.log(`Starting ${server.name} on port ${port}...`);
     
-    // Use mcp-proxy CLI to start the server with shell support
+    // Use mcp-proxy CLI to start the server
     const spawnArgs = [
       '--port', port.toString(),
       '--debug',
-      '--shell',
+      '--server', 'stream',
       server.command,
       ...(server.args || [])
     ];
