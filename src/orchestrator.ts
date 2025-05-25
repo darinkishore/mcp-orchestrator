@@ -59,7 +59,7 @@ async function startServers(): Promise<void> {
       ...(server.args || [])
     ];
     
-    const proc: ChildProcess = spawn('node', ['mcp-proxy-fork/dist/bin/mcp-proxy.js', ...spawnArgs], {
+    const proc: ChildProcess = spawn('node', ['node_modules/mcp-proxy/dist/bin/mcp-proxy.js', ...spawnArgs], {
       env: { ...process.env, ...server.env },
       stdio: 'inherit'
     });
