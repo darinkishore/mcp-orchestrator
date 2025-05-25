@@ -55,10 +55,11 @@ async function startServers(): Promise<void> {
       '--debug',
       '--server', 'stream',
       server.command,
+      '--', // Add separator to prevent yargs from consuming server arguments
       ...(server.args || [])
     ];
     
-    const proc: ChildProcess = spawn('node', ['node_modules/mcp-proxy/dist/bin/mcp-proxy.js', ...spawnArgs], {
+    const proc: ChildProcess = spawn('node', ['mcp-proxy-fork/dist/bin/mcp-proxy.js', ...spawnArgs], {
       env: { ...process.env, ...server.env },
       stdio: 'inherit'
     });
